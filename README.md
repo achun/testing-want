@@ -9,9 +9,7 @@ GoDoc
 =====
 
 The documentation is available at
-[gowalker.org](http://gowalker.org/github.com/achun/tom-toml).
-
-http://gowalker.org/github.com/achun/testing-want
+[gowalker.org](http://gowalker.org/github.com/achun/testing-want).
 
 Import
 ======

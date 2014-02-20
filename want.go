@@ -45,7 +45,7 @@ func Recover(t *testing.T, msg string, fn func()) {
 	fn()
 }
 
-// want recover panic
+// want recover panic, if nil Fatal
 func Panic(t *testing.T, fn func()) {
 	defer func() {
 		if nil == recover() {
@@ -55,16 +55,26 @@ func Panic(t *testing.T, fn func()) {
 	fn()
 }
 
-// wants equal nil
-func Nil(t *testing.T, wants interface{}, show ...interface{}) {
-	if wants != nil {
-		t.Fatal(Caller(2), "want nil, but got:", wants, String(show...))
+// want err equal nil, if not nil Fatal
+func Nil(t *testing.T, err interface{}, show ...interface{}) {
+	if err != nil {
+		t.Fatal(Caller(2), "want nil, but got:", err, String(show...))
 	}
 }
 
-// wants not nil
-func Error(t *testing.T, wants error, show ...interface{}) {
-	if wants == nil {
+// wants an error, if nil Fatal
+func Error(t *testing.T, err error, show ...interface{}) {
+	if err == nil {
 		t.Fatal(Caller(2), "want an error but got nil.", String(show...))
 	}
+}
+
+// return last argument.(error)
+func Err(rets ...interface{}) error {
+	l := len(rets)
+	if l == 0 {
+		return nil
+	}
+	err, _ := rets[l-1].(error)
+	return err
 }
