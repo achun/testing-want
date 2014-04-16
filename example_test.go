@@ -7,6 +7,7 @@ import (
 )
 
 func TestWants(t *testing.T) {
+	ExampleT(t)
 	ExampleCaller(t)
 	ExampleTrue(t)
 	ExampleEqual(t)
@@ -17,7 +18,15 @@ func TestWants(t *testing.T) {
 }
 
 func ExampleCaller(t *testing.T) {
-	println(want.Caller(2))
+	want.Equal(t, want.Caller(1), "github.com/achun/testing-want_test.ExampleCaller:21")
+	want.Equal(t, want.Caller(2), "github.com/achun/testing-want_test.TestWants:11")
+}
+
+func ExampleT(t *testing.T) {
+	wt := want.T(t)
+
+	wt.Equal(want.Caller(1), "github.com/achun/testing-want_test.ExampleT:28")
+	wt.Equal(want.Caller(2), "github.com/achun/testing-want_test.TestWants:10")
 }
 
 func ExampleTrue(t *testing.T) {
