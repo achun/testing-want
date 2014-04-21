@@ -2,6 +2,7 @@ package want
 
 import (
 	"fmt"
+	"reflect"
 	"runtime"
 	"testing"
 )
@@ -16,8 +17,10 @@ func String(show ...interface{}) string {
 
 // returns filepath and line by runtime
 func Caller(skip int) string {
-	pc, _, line, _ := runtime.Caller(skip)
+	pc, file, line, _ := runtime.Caller(skip)
 	return runtime.FuncForPC(pc).Name() + ":" + fmt.Sprint(line)
+	// for local
+	return file + ":" + fmt.Sprint(line)
 }
 
 // return last argument.(error)
@@ -41,21 +44,21 @@ type Want struct {
 
 func (w Want) True(ok bool, show ...interface{}) Want {
 	if !ok {
-		w.T.Fatal(Caller(w.Skip), "\n", String(show...))
+		w.T.Fatal(Caller(w.Skip), "\nwant: true, but got: false", String(show...))
 	}
 	return w
 }
 
 func (w Want) False(ok bool, show ...interface{}) Want {
 	if ok {
-		w.T.Fatal(Caller(w.Skip), "\n", String(show...))
+		w.T.Fatal(Caller(w.Skip), "\nwant: false, but got: true", String(show...))
 	}
 	return w
 }
 
 func (w Want) Equal(got, wants interface{}, show ...interface{}) Want {
 	if wants != got {
-		w.T.Fatal(Caller(w.Skip), "\nwant:", wants, ", but got:", got, String(show...))
+		w.T.Fatal(Caller(w.Skip), "\nwant:", wants, "\n got:", got, String(show...))
 	}
 	return w
 }
@@ -64,7 +67,7 @@ func (w Want) Recover(msg string, fn func()) Want {
 	defer func() {
 		str := fmt.Sprint(recover())
 		if msg != str {
-			w.T.Fatal(Caller(w.Skip+1), "\nwant recover:", msg, ", but got:", str)
+			w.T.Fatal(Caller(w.Skip+1), "\nwant recover:", msg, "\n got:", str)
 		}
 	}()
 	fn()
@@ -81,16 +84,29 @@ func (w Want) Panic(fn func()) Want {
 	return w
 }
 
-func (w Want) Nil(err interface{}, show ...interface{}) Want {
-	if err != nil {
-		w.T.Fatal(Caller(w.Skip), "\nwant nil, but got:", err, String(show...))
+func (w Want) Nil(i interface{}, show ...interface{}) Want {
+	if i != nil {
+		v := reflect.ValueOf(i)
+		if v.Kind() == reflect.Ptr && !v.IsNil() {
+			w.T.Fatal(Caller(w.Skip), "\nwant nil, but got:", i, String(show...))
+		}
+	}
+	return w
+}
+
+func (w Want) NotNil(i interface{}, show ...interface{}) Want {
+	if i == nil {
+		v := reflect.ValueOf(i)
+		if v.Kind() == reflect.Ptr && v.IsNil() {
+			w.T.Fatal(Caller(w.Skip), "\nwant not nil, but got:", i, String(show...))
+		}
 	}
 	return w
 }
 
 func (w Want) Error(err error, show ...interface{}) Want {
 	if err == nil {
-		w.T.Fatal(Caller(w.Skip), "\nwant an error but got nil.", String(show...))
+		w.T.Fatal(Caller(w.Skip), "\nwant an error, but got nil.", String(show...))
 	}
 	return w
 }
@@ -98,6 +114,11 @@ func (w Want) Error(err error, show ...interface{}) Want {
 // want ok equal true
 func True(t *testing.T, ok bool, show ...interface{}) {
 	(Want{t, 3}).True(ok, show...)
+}
+
+// want ok equal false
+func False(t *testing.T, ok bool, show ...interface{}) {
+	(Want{t, 3}).False(ok, show...)
 }
 
 // want got equal wants
@@ -115,9 +136,14 @@ func Panic(t *testing.T, fn func()) {
 	(Want{t, 3}).Panic(fn)
 }
 
-// want err equal nil, if not nil Fatal
-func Nil(t *testing.T, err interface{}, show ...interface{}) {
-	(Want{t, 3}).Nil(err, show...)
+// want v as nil, if not nil Fatal
+func Nil(t *testing.T, v interface{}, show ...interface{}) {
+	(Want{t, 3}).Nil(v, show...)
+}
+
+// want v not nil, if not nil Fatal
+func NotNil(t *testing.T, v interface{}, show ...interface{}) {
+	(Want{t, 3}).NotNil(v, show...)
 }
 
 // wants an error, if nil Fatal
