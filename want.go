@@ -9,18 +9,30 @@ import (
 
 // returns string by fmt.Sprint. if not empty, prefix "\n"
 func String(show ...interface{}) string {
-	if len(show) != 0 {
-		return "\n" + fmt.Sprint(show...)
+	if len(show) == 0 {
+		return ""
 	}
-	return ""
+	ret := "\n"
+	for _, i := range show {
+		fn, ok := i.(func() string)
+		if ok {
+			ret += fn()
+		} else {
+			ret += fmt.Sprint(i)
+		}
+	}
+	return ret
 }
+
+var LocalFileLine bool
 
 // returns filepath and line by runtime
 func Caller(skip int) string {
 	pc, file, line, _ := runtime.Caller(skip)
+	if LocalFileLine {
+		return file + ":" + fmt.Sprint(line)
+	}
 	return runtime.FuncForPC(pc).Name() + ":" + fmt.Sprint(line)
-	// for local
-	return file + ":" + fmt.Sprint(line)
 }
 
 // return last argument.(error)
@@ -57,6 +69,20 @@ func (w Want) False(ok bool, show ...interface{}) Want {
 }
 
 func (w Want) Equal(got, wants interface{}, show ...interface{}) Want {
+	ser, ok := got.(fmt.Stringer)
+	if ok {
+		got = ser.String()
+	} else if v := reflect.ValueOf(got); v.Kind() >= reflect.Array {
+		got = fmt.Sprint(got)
+	}
+
+	ser, ok = wants.(fmt.Stringer)
+	if ok {
+		wants = ser.String()
+	} else if v := reflect.ValueOf(wants); v.Kind() >= reflect.Array {
+		wants = fmt.Sprint(wants)
+	}
+
 	if wants != got {
 		w.T.Fatal(Caller(w.Skip), "\nwant:", wants, "\n got:", got, String(show...))
 	}
