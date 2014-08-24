@@ -7,6 +7,14 @@ import (
 	"testing"
 )
 
+func Println(i ...interface{}) {
+	fmt.Println(i...)
+}
+
+func Printf(format string, i ...interface{}) {
+	fmt.Printf(format, i...)
+}
+
 // returns string by fmt.Sprint. if not empty, prefix "\n"
 func String(show ...interface{}) string {
 	if len(show) == 0 {
@@ -30,7 +38,7 @@ var LocalFileLine bool
 func Caller(skip int) string {
 	pc, file, line, _ := runtime.Caller(skip)
 	if LocalFileLine {
-		return file + ":" + fmt.Sprint(line)
+		return fmt.Sprintf("\n%s:\n  %v\n", file, line)
 	}
 	return runtime.FuncForPC(pc).Name() + ":" + fmt.Sprint(line)
 }
@@ -45,13 +53,27 @@ func LastError(rets ...interface{}) error {
 	return err
 }
 
-func T(t *testing.T) Want {
+func T(t testing.TB) Want {
 	return Want{t, 2}
 }
 
 type Want struct {
-	T    *testing.T
+	T    testing.TB
 	Skip int
+}
+
+func (w Want) Fatalf(format string, show ...interface{}) {
+	show = append([]interface{}{
+		Caller(w.Skip) + "\n",
+	}, show...)
+	w.T.Fatalf(format, show...)
+}
+
+func (w Want) Fatal(show ...interface{}) {
+	show = append([]interface{}{
+		Caller(w.Skip) + "\n",
+	}, show...)
+	w.T.Fatal(show...)
 }
 
 func (w Want) True(ok bool, show ...interface{}) Want {
