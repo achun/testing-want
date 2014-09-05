@@ -53,6 +53,20 @@ func LastError(rets ...interface{}) error {
 	return err
 }
 
+func asPtr(k reflect.Kind) bool {
+	switch k {
+	case reflect.Chan,
+		reflect.Func,
+		reflect.Map,
+		reflect.Ptr,
+		reflect.Interface,
+		reflect.Slice:
+
+		return true
+	}
+	return false
+}
+
 func T(t testing.TB) Want {
 	return Want{t, 2}
 }
@@ -78,14 +92,14 @@ func (w Want) Fatal(show ...interface{}) {
 
 func (w Want) True(ok bool, show ...interface{}) Want {
 	if !ok {
-		w.T.Fatal(Caller(w.Skip), "\nwant: true, but got: false", String(show...))
+		w.T.Fatal(Caller(w.Skip), "\nwant: true\n got: false", String(show...))
 	}
 	return w
 }
 
 func (w Want) False(ok bool, show ...interface{}) Want {
 	if ok {
-		w.T.Fatal(Caller(w.Skip), "\nwant: false, but got: true", String(show...))
+		w.T.Fatal(Caller(w.Skip), "\nwant: false\n got: true", String(show...))
 	}
 	return w
 }
@@ -115,7 +129,7 @@ func (w Want) Recover(msg string, fn func()) Want {
 	defer func() {
 		str := fmt.Sprint(recover())
 		if msg != str {
-			w.T.Fatal(Caller(w.Skip+1), "\nwant recover:", msg, "\n got:", str)
+			w.T.Fatal(Caller(w.Skip+1), "\nwant: recover ", msg, "\n got:", str)
 		}
 	}()
 	fn()
@@ -125,7 +139,7 @@ func (w Want) Recover(msg string, fn func()) Want {
 func (w Want) Panic(fn func()) Want {
 	defer func() {
 		if nil == recover() {
-			w.T.Fatal(Caller(w.Skip+1), "\nwant panic, but got nil")
+			w.T.Fatal(Caller(w.Skip+1), "\nwant: panic\n got: nil")
 		}
 	}()
 	fn()
@@ -133,28 +147,24 @@ func (w Want) Panic(fn func()) Want {
 }
 
 func (w Want) Nil(i interface{}, show ...interface{}) Want {
-	if i != nil {
-		v := reflect.ValueOf(i)
-		if v.Kind() == reflect.Ptr && !v.IsNil() {
-			w.T.Fatal(Caller(w.Skip), "\nwant nil, but got:", i, String(show...))
-		}
+	v := reflect.ValueOf(i)
+	if asPtr(v.Kind()) && !v.IsNil() || v.IsValid() {
+		w.T.Fatal(Caller(w.Skip), "\nwant: nil\n got:", i, String(show...))
 	}
 	return w
 }
 
 func (w Want) NotNil(i interface{}, show ...interface{}) Want {
-	if i == nil {
-		v := reflect.ValueOf(i)
-		if v.Kind() == reflect.Ptr && v.IsNil() {
-			w.T.Fatal(Caller(w.Skip), "\nwant not nil, but got:", i, String(show...))
-		}
+	v := reflect.ValueOf(i)
+	if !v.IsValid() || asPtr(v.Kind()) && v.IsNil() {
+		w.T.Fatal(Caller(w.Skip), "\nwant: not nil\n got:", i, String(show...))
 	}
 	return w
 }
 
 func (w Want) Error(err error, show ...interface{}) Want {
 	if err == nil {
-		w.T.Fatal(Caller(w.Skip), "\nwant an error, but got nil.", String(show...))
+		w.T.Fatal(Caller(w.Skip), "\nwant: an error\n got: nil", String(show...))
 	}
 	return w
 }
